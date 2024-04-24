@@ -71,6 +71,16 @@ resource "azuredevops_git_repository" "template_repo" {
   }
 }
 
+resource "azuredevops_git_repository_file" "pipeline_file" {
+  for_each = azuredevops_git_repository.template_repo
+  repository_id       = each.value.id
+  file                = "azure-pipelines.yml"
+  content             = file("${path.module}/azure-pipelines.yml")
+  branch              = "refs/heads/main"
+  commit_message      = "pipeline"
+  overwrite_on_create = false
+}
+
 output "project_id" {
   value = azuredevops_project.project.id
 }

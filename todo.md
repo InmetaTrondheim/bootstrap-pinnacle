@@ -4,6 +4,7 @@
 ### bootstrap:
 - [ ] pack bootstrap up in docker, and run via pull request pipeline
 - [ ] generalize for github and gitlab bootstrapping
+- [ ] set up terraform state in azure tenant of customer 
 - [ ] consider making templating more flexible via running script on top of template repo
 ---   ie: use blank repo as template, and run `dotnet new` or `npm init` in it()
 ---   alternatively: use proper backend template, and run commands to "layer" pipeline files specific to platform into the repo
@@ -14,3 +15,4 @@
 - [ ] this is dependent on build artifacts from frontend and backend being available
 ### pipeline:
 - [ ] run pipelines by default on frontend and backend
+- [ ] should i set up pipeline runner pools?
