@@ -1,7 +1,9 @@
 name: Build & publish terraform image
 on:
-  release:
-    types: [published]
+  push:
+    branches: [ "main", "pipeline" ]
+  pull_request:
+    branches: [ "main", "pipeline" ]
 
 env:
   REGISTRY: ghcr.io
