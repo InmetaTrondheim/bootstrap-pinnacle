@@ -7,27 +7,25 @@ terraform {
   }
 }
 
-provider "azuredevops" {
-  org_service_url = var.azuredevops_org_service_url
-}
 
 variable "project_name" {
   description = "The name of the Azure DevOps project to create"
   type        = string
 }
 
-variable "azuredevops_org_service_url" {
-  description = "The URL for the Azure DevOps organization"
-  type        = string
+locals {
+  pipeline_yaml_path = "azure-pipelines.yml"
+  output_logs_file= "${path.root}/.terraform/${timestamp()}.log"
 }
+
 
 variable "template_repos" {
   description = "List of repositories to be created"
-  type        = map(object({
-    repo_name     = string
-    init_type     = string
-    source_type   = string
-    source_url    = string
+  type = map(object({
+    repo_name   = string
+    init_type   = string
+    source_type = string
+    source_url  = string
   }))
   default = {
     "frontend" = {
@@ -62,8 +60,8 @@ resource "azuredevops_project" "project" {
 resource "azuredevops_git_repository" "template_repo" {
   for_each = var.template_repos
 
-  project_id    = azuredevops_project.project.id
-  name          = each.value.repo_name
+  project_id = azuredevops_project.project.id
+  name       = each.value.repo_name
   initialization {
     init_type   = each.value.init_type
     source_type = each.value.source_type
@@ -72,16 +70,40 @@ resource "azuredevops_git_repository" "template_repo" {
 }
 
 resource "azuredevops_git_repository_file" "pipeline_file" {
-  for_each = azuredevops_git_repository.template_repo
+  for_each            = azuredevops_git_repository.template_repo
   repository_id       = each.value.id
-  file                = "azure-pipelines.yml"
+  file                = local.pipeline_yaml_path
   content             = file("${path.module}/azure-pipelines.yml")
   branch              = "refs/heads/main"
   commit_message      = "pipeline"
   overwrite_on_create = false
 }
 
+resource "null_resource" "create_pipelins" {
+  for_each            = azuredevops_git_repository.template_repo
+  
+  depends_on = [azuredevops_git_repository_file.pipeline_file]
+  provisioner "local-exec" {
+    command = <<EOT
+    # Check if the pipeline exists using az pipelines show
+    if az pipelines show --name ${each.key} --organization $AZDO_ORG_SERVICE_URL --project ${var.project_name} &> /dev/null; then
+        echo "Pipeline already exists for ${var.project_name}. Exiting." | tee >> ${local.output_logs_file}
+        exit 0
+    fi
+
+    # Run the command to create the pipeline
+    az pipelines create \
+    --name ${each.key} \
+    --repository ${each.value.name} \
+    --repository-type tfsgit \
+    --organization $AZDO_ORG_SERVICE_URL \
+    --yaml-path ${local.pipeline_yaml_path} \
+    --project ${var.project_name} \
+    >> ${local.output_logs_file}
+EOT
+  }
+}
+
 output "project_id" {
   value = azuredevops_project.project.id
 }
-

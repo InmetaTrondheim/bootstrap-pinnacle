@@ -1,19 +1,13 @@
-
+#set the following variables 
+#export AZDO_PERSONAL_ACCESS_TOKEN=<Personal Access Token>
+#export AZDO_ORG_SERVICE_URL=https://dev.azure.com/<Your Org Name>
 
 module "azure_devops_project" {
-  source                      = "./modules/azure_devops_project"
-  azuredevops_org_service_url = var.azuredevops_org_service_url
-  project_name                = "NewCustomerProject"
-}
-
-variable "azuredevops_org_service_url" {
-  description = "The URL for the Azure DevOps organization"
-  type        = string
+  source       = "./modules/azure_devops_project"
+  project_name = "tfCreatedPro"
 }
 
 output "project_id" {
   value = module.azure_devops_project.project_id
 }
-
-
 
