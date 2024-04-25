@@ -27,7 +27,6 @@ jobs:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
       
       - name: Log in to the Github registry
-        if: inputs.registry-github-enable
         uses: docker/login-action@v3.1.0
         with:
           registry: ${{ env.REGISTRY }}
