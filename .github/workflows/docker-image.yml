@@ -25,6 +25,6 @@ jobs:
         # Path to the Dockerfile
         #file: # optional
         push: true # optional, default is false
-        tags: ghcr.io/${REPO}/terraform:latest
+        tags: ghcr.io/${{ env.REPO }}/terraform:latest
 
           
