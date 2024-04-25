@@ -22,6 +22,6 @@ jobs:
         # Path to the Dockerfile
         #file: # optional
         push: true # optional, default is false
-        # Generate SBOM attestation for the build (shorthand for --attest=type=sbom)
+        tags: terraform:latest
 
           
