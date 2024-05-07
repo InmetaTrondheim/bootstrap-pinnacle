@@ -15,17 +15,17 @@ variable "project_name" {
 
 locals {
   pipeline_yaml_path = "azure-pipelines.yml"
-  output_logs_file= "${path.root}/.terraform/${timestamp()}.log"
+  output_logs_file   = "${path.root}/.terraform/${timestamp()}.log"
 }
 
 
 variable "template_repos" {
   description = "List of repositories to be created"
   type = map(object({
-    repo_name   = string
-    init_type   = string
-    source_type = string
-    source_url  = string
+    repo_name            = string
+    init_type            = string
+    source_url           = optional(string)
+    template_folder_path = optional(string)
   }))
   default = {
     "frontend" = {
@@ -33,12 +33,6 @@ variable "template_repos" {
       init_type   = "Import",
       source_type = "Git",
       source_url  = "https://github.com/InmetaTrondheim/dotnet-template.git"
-    },
-    "backend" = {
-      repo_name   = "frontend",
-      init_type   = "Import",
-      source_type = "Git",
-      source_url  = "https://github.com/InmetaTrondheim/nextjs-template.git"
     },
     "infra" = {
       repo_name   = "infra",
@@ -62,29 +56,52 @@ resource "azuredevops_git_repository" "template_repo" {
 
   project_id = azuredevops_project.project.id
   name       = each.value.repo_name
+	  default_branch = "refs/heads/main"
   initialization {
     init_type   = each.value.init_type
-    source_type = each.value.source_type
-    source_url  = each.value.source_url
+    source_type = each.value.init_type == "Import" ? "Git" : null
+    source_url  = each.value.init_type == "Import" ? each.value.source_url : null
   }
 }
+
+# resource "azuredevops_git_repository_branch" "example_from_commit_id" {
+#   # for_each            = [ for r in azuredevops_git_repository.template_repo : r if r.initialization[0].init_type== "Clean"]
+#   for_each      = { for r in azuredevops_git_repository.template_repo : r.name => r if r.initialization[0].init_type == "Clean" }
+#   repository_id = each.value.id
+#   name          = "main"
+# }
 
 resource "azuredevops_git_repository_file" "pipeline_file" {
   for_each            = azuredevops_git_repository.template_repo
   repository_id       = each.value.id
   file                = local.pipeline_yaml_path
   content             = file("${path.module}/azure-pipelines.yml")
-  branch              = "refs/heads/main"
+  branch              = each.value.default_branch
+  commit_message      = "pipeline"
+  overwrite_on_create = false
+}
+resource "azuredevops_git_repository_file" "pipeline_file" {
+  for_each            = [ for r in azuredevops_git_repository.template_repo : r if r.initialization[0].init_type== "Clean"]
+  repository_id       = each.value.id
+  file                = local.pipeline_yaml_path
+  content             = file("${path.module}/azure-pipelines.yml")
+  branch              = each.value.default_branch
   commit_message      = "pipeline"
   overwrite_on_create = false
 }
 
 resource "null_resource" "create_pipelins" {
-  for_each            = azuredevops_git_repository.template_repo
-  
+  for_each = azuredevops_git_repository.template_repo
+
   depends_on = [azuredevops_git_repository_file.pipeline_file]
   provisioner "local-exec" {
     command = <<EOT
+    # Check if logged into Azure DevOps
+    if ! az devops project list --organization $AZDO_ORG_SERVICE_URL &> /dev/null; then
+        echo "Not logged in to Azure DevOps. Attempting to log in using PAT..."
+        echo $AZDO_PERSONAL_ACCESS_TOKEN | az devops login --organization $AZDO_ORG_SERVICE_URL
+    fi
+
     # Check if the pipeline exists using az pipelines show
     if az pipelines show --name ${each.key} --organization $AZDO_ORG_SERVICE_URL --project ${var.project_name} &> /dev/null; then
         echo "Pipeline already exists for ${var.project_name}. Exiting." | tee >> ${local.output_logs_file}
