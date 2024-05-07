@@ -54,9 +54,9 @@ resource "azuredevops_project" "project" {
 resource "azuredevops_git_repository" "template_repo" {
   for_each = var.template_repos
 
-  project_id = azuredevops_project.project.id
-  name       = each.value.repo_name
-	  default_branch = "refs/heads/main"
+  project_id     = azuredevops_project.project.id
+  name           = each.value.repo_name
+  # default_branch = "refs/heads/main"
   initialization {
     init_type   = each.value.init_type
     source_type = each.value.init_type == "Import" ? "Git" : null
@@ -64,15 +64,9 @@ resource "azuredevops_git_repository" "template_repo" {
   }
 }
 
-# resource "azuredevops_git_repository_branch" "example_from_commit_id" {
-#   # for_each            = [ for r in azuredevops_git_repository.template_repo : r if r.initialization[0].init_type== "Clean"]
-#   for_each      = { for r in azuredevops_git_repository.template_repo : r.name => r if r.initialization[0].init_type == "Clean" }
-#   repository_id = each.value.id
-#   name          = "main"
-# }
-
 resource "azuredevops_git_repository_file" "pipeline_file" {
-  for_each            = azuredevops_git_repository.template_repo
+  # for_each            = azuredevops_git_repository.template_repo
+  for_each            = { for r in azuredevops_git_repository.template_repo : r.name => r if r.initialization[0].init_type != "Uninitialized" }
   repository_id       = each.value.id
   file                = local.pipeline_yaml_path
   content             = file("${path.module}/azure-pipelines.yml")
@@ -80,19 +74,29 @@ resource "azuredevops_git_repository_file" "pipeline_file" {
   commit_message      = "pipeline"
   overwrite_on_create = false
 }
-resource "azuredevops_git_repository_file" "pipeline_file" {
-  for_each            = [ for r in azuredevops_git_repository.template_repo : r if r.initialization[0].init_type== "Clean"]
-  repository_id       = each.value.id
-  file                = local.pipeline_yaml_path
-  content             = file("${path.module}/azure-pipelines.yml")
-  branch              = each.value.default_branch
-  commit_message      = "pipeline"
-  overwrite_on_create = false
+resource "null_resource" "push_repo" {
+  for_each = { for r in azuredevops_git_repository.template_repo : r.name => r if r.initialization[0].init_type == "Uninitialized" }
+  provisioner "local-exec" {
+    working_dir = var.template_repos[each.value.name].template_folder_path
+    command     = <<EOT
+    #push to the repo from azuredevops_git_repository.template_repo
+    ssh-keygen -F ssh.dev.azure.com || ssh-keyscan ssh.dev.azure.com >> ~/.ssh/known_hosts
+
+    git remote show origin || git remote add origin ${each.value.ssh_url}
+
+    B64_PAT=$(printf "$(echo $AZDO_PERSONAL_ACCESS_TOKEN)" | base64)  
+
+    git add .
+    git commit -m "Initial commit"
+    git -c http.extraHeader="Authorization: Basic $B64_PAT" push
+EOT
+  }
 }
 
 resource "null_resource" "create_pipelins" {
   for_each = azuredevops_git_repository.template_repo
 
+  # working_dir = var.template_repos[index(var.template_repos.*.repo_name, each.value.name)].template_folder_path
   depends_on = [azuredevops_git_repository_file.pipeline_file]
   provisioner "local-exec" {
     command = <<EOT

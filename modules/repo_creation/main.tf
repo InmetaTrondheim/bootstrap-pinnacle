@@ -25,7 +25,7 @@ resource "null_resource" "mkdir" {
   }
 
   provisioner "local-exec" {
-    command     = "mkdir -p ${local.temp_dir}"
+    command     = "mkdir -p ${local.temp_dir} && git init ${local.temp_dir}"
     interpreter = ["/bin/sh", "-c"]
   }
 }

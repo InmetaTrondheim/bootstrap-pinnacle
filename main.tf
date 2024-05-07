@@ -19,7 +19,7 @@ module "azure_devops_project" {
     },
     "backend" = {
       repo_name            = "backend",
-      init_type            = "Clean",
+      init_type            = "Uninitialized",
       template_folder_path = module.repo_creation.initialized_folder_path
     },
     "infra" = {
