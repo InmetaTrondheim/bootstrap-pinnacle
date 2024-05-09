@@ -14,7 +14,8 @@ variable "project_name" {
 }
 
 locals {
-  pipeline_yaml_path = "azure-pipelines.yml"
+  repo_meta_folder   = "config"
+  main_pipieline_file = join("/",[local.repo_meta_folder, "azure-pipelines.yml"])
   output_logs_file   = "${path.root}/.terraform/${timestamp()}.log"
 }
 
@@ -54,8 +55,8 @@ resource "azuredevops_project" "project" {
 resource "azuredevops_git_repository" "template_repo" {
   for_each = var.template_repos
 
-  project_id     = azuredevops_project.project.id
-  name           = each.value.repo_name
+  project_id = azuredevops_project.project.id
+  name       = each.value.repo_name
   # default_branch = "refs/heads/main"
   initialization {
     init_type   = each.value.init_type
@@ -65,15 +66,33 @@ resource "azuredevops_git_repository" "template_repo" {
 }
 
 resource "azuredevops_git_repository_file" "pipeline_file" {
-  # for_each            = azuredevops_git_repository.template_repo
-  for_each            = { for r in azuredevops_git_repository.template_repo : r.name => r if r.initialization[0].init_type != "Uninitialized" }
+  for_each = azuredevops_git_repository.template_repo
+  # for_each            = { for r in azuredevops_git_repository.template_repo : r.name => r if r.initialization[0].init_type != "Uninitialized" }
   repository_id       = each.value.id
-  file                = local.pipeline_yaml_path
+  file                = local.main_pipieline_file
   content             = file("${path.module}/azure-pipelines.yml")
-  branch              = each.value.default_branch
+  branch              = try(each.value.default_branch, "main")
   commit_message      = "pipeline"
   overwrite_on_create = false
 }
+resource "azuredevops_git_repository_file" "pipeline_file_template" {
+  for_each = azuredevops_git_repository.template_repo
+  # for_each            = { for r in azuredevops_git_repository.template_repo : r.name => r if r.initialization[0].init_type != "Uninitialized" }
+  repository_id       = each.value.id
+  file                = join("/",[local.repo_meta_folder, "earthly-install-template.yml"])
+  content             = <<EOF
+steps:
+  - script: |
+      # Check if Earthly is installed and install if not
+      if ! type earthly >/dev/null 2>&1; then
+        sudo /bin/sh -c 'wget https://github.com/earthly/earthly/releases/latest/download/earthly-linux-amd64 -O /usr/local/bin/earthly && chmod +x /usr/local/bin/earthly && /usr/local/bin/earthly bootstrap --with-autocomplete'
+      fi
+	EOF
+  branch              = try(each.value.default_branch, "main")
+  commit_message      = "pipeline"
+  overwrite_on_create = false
+}
+
 resource "null_resource" "push_repo" {
   for_each = { for r in azuredevops_git_repository.template_repo : r.name => r if r.initialization[0].init_type == "Uninitialized" }
   provisioner "local-exec" {
@@ -118,7 +137,7 @@ resource "null_resource" "create_pipelins" {
     --repository ${each.value.name} \
     --repository-type tfsgit \
     --organization $AZDO_ORG_SERVICE_URL \
-    --yaml-path ${local.pipeline_yaml_path} \
+    --yaml-path ${local.main_pipieline_file} \
     --project ${var.project_name} \
     >> ${local.output_logs_file}
 EOT

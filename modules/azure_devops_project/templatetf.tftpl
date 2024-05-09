@@ -1,13 +1,9 @@
-#set the following variables 
-#export AZDO_PERSONAL_ACCESS_TOKEN=<Personal Access Token>
-#export AZDO_ORG_SERVICE_URL=https://dev.azure.com/<Your Org Name>
 
 module "repo_creation" {
   source       = "github.com/InmetaTrondheim/bootstrap-pinnacle//modules/repo_creation"
   bootstrap_script = "docker run -v $(pwd):/out ghcr.io/inmetatrondheim/dotnet-template:main -n tset "
   repo_host        = "azuredevops"
 }
-
 module "azure_devops_project" {
   source       = "github.com/InmetaTrondheim/bootstrap-pinnacle//modules/azure_devops_project"
   project_name = "tfCreatedPro2"

@@ -30,8 +30,15 @@
           };
 
       myShell = pkgs.mkShell {
-        buildInputs = with pkgs; [ nixd opentofu ];
-        packages = [ mynixvim ];
+        buildInputs = with pkgs; [
+          nixd
+          opentofu
+
+        ];
+        packages = [
+          mynixvim
+          (pkgs.azure-cli.withExtensions [ pkgs.azure-cli.extensions.azure-devops ])
+        ];
       };
     in
     {

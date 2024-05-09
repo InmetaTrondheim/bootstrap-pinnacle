@@ -1,20 +1,70 @@
-# Starter pipeline
-# Start with a minimal pipeline that you can customize to build and deploy your code.
-# Add steps that build, run tests, deploy, and more:
-# https://aka.ms/yaml
+pool:
+  vmImage: 'ubuntu-latest'
 
 trigger:
-- main
+  branches:
+    include:
+      - '*'  # Triggers the pipeline on changes to any branch
 
-pool:
-  vmImage: ubuntu-latest
+stages:
+  - stage: Build
+    jobs: 
+      - job: BuildProject
+        steps:
+          - checkout: self
+          - template: earthly-install-template.yml 
+          - script: |
+              earthly +build
 
-steps:
-- script: echo Hello, world!
-  displayName: 'Run a one-line script'
+  - stage: ImmediateValidation
+    jobs:
+      - job: ImmediateTests
+        steps:
+          - checkout: self
+          - template: earthly-install-template.yml 
+          - script: |
+              earthly +immediate-tests
 
-- script: |
-    echo Add other tasks to build, test, and deploy your project.
-    echo See https://aka.ms/yaml
-  displayName: 'Run a multi-line script'
+  - stage: Publish
+    jobs:
+      - job: PublishArtifacts
+        steps:
+          - checkout: self
+          - template: earthly-install-template.yml 
+          - script: |
+              earthly +publish
+
+
+  - stage: DeploymentGate
+    condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
+    jobs:
+      - job: ComprehensiveTests
+        steps:
+          - checkout: self
+          - template: earthly-install-template.yml 
+          - script: |
+              earthly +comprehensive-tests
+      - job: waitForValidation
+        displayName: Wait for external validation
+        pool: server
+        timeoutInMinutes: 4320 # job times out in 3 days
+        steps:
+        - task: ManualValidation@0
+          timeoutInMinutes: 1440 # task times out in 1 day
+          inputs:
+            notifyUsers: |
+              test@test.com
+              example@test.com
+            instructions: 'Please validate the build configuration and resume'
+            onTimeout: 'resume'
+
+  - stage: Deploy
+    condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
+    jobs:
+      - job: DeployProject
+        steps:
+          - checkout: self
+          - template: earthly-install-template.yml 
+          - script: |
+              earthly +deploy
 
