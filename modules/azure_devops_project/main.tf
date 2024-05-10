@@ -73,6 +73,10 @@ resource "azuredevops_git_repository_file" "pipeline_file" {
   branch              = try(each.value.default_branch, "main")
   commit_message      = "pipeline"
   overwrite_on_create = false
+  versionDescriptor {
+    version      = "main"
+    version_type = "branch"
+  }
 }
 resource "azuredevops_git_repository_file" "pipeline_file_template" {
   for_each            = azuredevops_git_repository.template_repo
@@ -89,6 +93,10 @@ steps:
   branch              = try(each.value.default_branch, "main")
   commit_message      = "pipeline"
   overwrite_on_create = false
+  versionDescriptor {
+    version      = "main"
+    version_type = "branch"
+  }
 }
 
 
@@ -101,16 +109,9 @@ resource "null_resource" "push_repo" {
     command     = <<EOT
     #push to the repo from azuredevops_git_repository.template_repo
     mkdir -p ~/.ssh && touch ~/.ssh/known_hosts && chmod 600 ~/.ssh/known_hosts
-
     ssh-keygen -F ssh.dev.azure.com || ssh-keyscan ssh.dev.azure.com >> ~/.ssh/known_hosts
 
-    # git remote show origin 2>/dev/null || git remote add origin ${each.value.web_url}
-
-    git remote add origin ${replace(each.value.web_url,"https://" , "https://$AZDO_PERSONAL_ACCESS_TOKEN@")}
-    echo git remote add origin ${replace(each.value.web_url,"https://" , "https://$AZDO_PERSONAL_ACCESS_TOKEN@")}
-
-    #export B64_PAT=$(printf "$AZDO_PERSONAL_ACCESS_TOKEN" | base64)  
-    # exoprt B64_PAT=$(printf ":$(System.AccessToken)" | base64)
+    git remote add origin ${replace(each.value.web_url, "https://", "https://$AZDO_PERSONAL_ACCESS_TOKEN@")}
 
     git config --global user.email "ci@pipeline.com" 
     git config --global user.name "genesis pipeline"
@@ -118,10 +119,6 @@ resource "null_resource" "push_repo" {
 
     git add .
     git commit -m "Initial commit"
-    # sleep 5
-    # echo git -c http.extraHeader="Authorization: Basic $B64_PAT" push origin main
-    # git -c http.extraHeader="Authorization: Basic $B64_PAT" push origin main
-    git fsck
     git push origin main
 EOT
   }
