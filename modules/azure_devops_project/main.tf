@@ -106,8 +106,8 @@ resource "null_resource" "push_repo" {
 
     # git remote show origin 2>/dev/null || git remote add origin ${each.value.web_url}
 
-    git remote add origin ${replace(each.value.web_url,"https://" , "https://$AZDO_PERSONAL_ACCESS_TOKEN@)}")}
-    echo git remote add origin ${replace(each.value.web_url,"https://" , "https://$AZDO_PERSONAL_ACCESS_TOKEN@)}")}
+    git remote add origin ${replace(each.value.web_url,"https://" , "https://$AZDO_PERSONAL_ACCESS_TOKEN@")}
+    echo git remote add origin ${replace(each.value.web_url,"https://" , "https://$AZDO_PERSONAL_ACCESS_TOKEN@")}
 
     #export B64_PAT=$(printf "$AZDO_PERSONAL_ACCESS_TOKEN" | base64)  
     # exoprt B64_PAT=$(printf ":$(System.AccessToken)" | base64)
