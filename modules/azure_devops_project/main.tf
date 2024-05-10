@@ -70,13 +70,9 @@ resource "azuredevops_git_repository_file" "pipeline_file" {
   repository_id       = each.value.id
   file                = local.main_pipieline_file
   content             = file("${path.module}/azure-pipelines.yml")
-  branch              = try(each.value.default_branch, "main")
+  branch              = "main"
   commit_message      = "pipeline"
   overwrite_on_create = false
-  versionDescriptor {
-    version      = "main"
-    version_type = "branch"
-  }
 }
 resource "azuredevops_git_repository_file" "pipeline_file_template" {
   for_each            = azuredevops_git_repository.template_repo
@@ -90,13 +86,9 @@ steps:
         sudo /bin/sh -c 'wget https://github.com/earthly/earthly/releases/latest/download/earthly-linux-amd64 -O /usr/local/bin/earthly && chmod +x /usr/local/bin/earthly && /usr/local/bin/earthly bootstrap --with-autocomplete'
       fi
 	EOF
-  branch              = try(each.value.default_branch, "main")
+  branch              = "main"
   commit_message      = "pipeline"
   overwrite_on_create = false
-  versionDescriptor {
-    version      = "main"
-    version_type = "branch"
-  }
 }
 
 
