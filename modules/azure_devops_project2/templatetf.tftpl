@@ -6,8 +6,8 @@ module "repo_creation" {
 }
 module "azure_devops_project" {
   source       = "github.com/InmetaTrondheim/bootstrap-pinnacle//modules/azure_devops_project"
-  project_id = "${project_id}"
-  repos = {
+  project_name = "tfCreatedPro2"
+  template_repos = {
     "frontend" = {
       repo_name  = "frontend",
       init_type  = "Import",

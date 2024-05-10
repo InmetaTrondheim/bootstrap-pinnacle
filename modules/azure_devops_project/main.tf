@@ -14,9 +14,9 @@ variable "project_name" {
 }
 
 locals {
-  repo_meta_folder   = "config"
-  main_pipieline_file = join("/",[local.repo_meta_folder, "azure-pipelines.yml"])
-  output_logs_file   = "${path.root}/.terraform/${timestamp()}.log"
+  repo_meta_folder    = "config"
+  main_pipieline_file = join("/", [local.repo_meta_folder, "azure-pipelines.yml"])
+  output_logs_file    = "${path.root}/.terraform/${timestamp()}.log"
 }
 
 
@@ -79,7 +79,7 @@ resource "azuredevops_git_repository_file" "pipeline_file_template" {
   for_each = azuredevops_git_repository.template_repo
   # for_each            = { for r in azuredevops_git_repository.template_repo : r.name => r if r.initialization[0].init_type != "Uninitialized" }
   repository_id       = each.value.id
-  file                = join("/",[local.repo_meta_folder, "earthly-install-template.yml"])
+  file                = join("/", [local.repo_meta_folder, "earthly-install-template.yml"])
   content             = <<EOF
 steps:
   - script: |

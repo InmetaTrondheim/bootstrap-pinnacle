@@ -1,0 +1,38 @@
+trigger:
+  branches:
+    include:
+    - '*'  # Triggers the pipeline on changes to any branch
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+stages:
+  - stage: Build
+    jobs: 
+      - job: init
+        displayName: 'Initialization'
+        steps:
+          - checkout: self
+          - script: |
+              docker run ghcr.io/inmetatrondheim/bootstrap-pinnacle:main init
+            displayName: 'Run Docker Init'
+
+      - job: plan
+        displayName: 'Plan Execution'
+        steps:
+          - checkout: self
+          - script: |
+              docker run ghcr.io/inmetatrondheim/bootstrap-pinnacle:main plan
+            displayName: 'Run Docker Plan'
+
+      - job: apply
+        displayName: 'Apply Execution'
+        condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
+        dependsOn:
+          - plan
+        steps:
+          - checkout: self
+          - script: |
+              docker run ghcr.io/inmetatrondheim/bootstrap-pinnacle:main apply
+            displayName: 'Run Docker Apply'
+
