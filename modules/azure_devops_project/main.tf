@@ -104,7 +104,7 @@ resource "null_resource" "push_repo" {
 
     git remote show origin || git remote add origin ${each.value.ssh_url}
 
-    B64_PAT=$(printf "$AZDO_PERSONAL_ACCESS_TOKEN" | base64)  
+    export B64_PAT=$(printf "$AZDO_PERSONAL_ACCESS_TOKEN" | base64)  
 
     git config --global user.email "ci@pipeline.com" 
     git config --global user.name "genesis pipeline"
