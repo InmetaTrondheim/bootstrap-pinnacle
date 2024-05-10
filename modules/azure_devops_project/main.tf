@@ -102,9 +102,13 @@ resource "null_resource" "push_repo" {
 
     ssh-keygen -F ssh.dev.azure.com || ssh-keyscan ssh.dev.azure.com >> ~/.ssh/known_hosts
 
-    git remote show origin 2>/dev/null || git remote add origin ${each.value.ssh_url}
+    # git remote show origin 2>/dev/null || git remote add origin ${each.value.web_url}
 
-    export B64_PAT=$(printf "$AZDO_PERSONAL_ACCESS_TOKEN" | base64)  
+    git remote show origin 2>/dev/null || git remote add origin ${replace("https://" , "https://$AZDO_PERSONAL_ACCESS_TOKEN@", each.value.web_url)}
+    git remote show origin
+
+    #export B64_PAT=$(printf "$AZDO_PERSONAL_ACCESS_TOKEN" | base64)  
+    # exoprt B64_PAT=$(printf ":$(System.AccessToken)" | base64)
 
     git config --global user.email "ci@pipeline.com" 
     git config --global user.name "genesis pipeline"
@@ -112,9 +116,11 @@ resource "null_resource" "push_repo" {
 
     git add .
     git commit -m "Initial commit"
-    sleep 5
-    echo git -c http.extraHeader="Authorization: Basic $B64_PAT" push origin main
-    git -c http.extraHeader="Authorization: Basic $B64_PAT" push origin main
+    # sleep 5
+    # echo git -c http.extraHeader="Authorization: Basic $B64_PAT" push origin main
+    # git -c http.extraHeader="Authorization: Basic $B64_PAT" push origin main
+    git fsck
+    git push origin main
 EOT
   }
 }
