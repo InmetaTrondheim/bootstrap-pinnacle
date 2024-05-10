@@ -62,8 +62,8 @@ resource "azuredevops_git_repository" "template_repo" {
 }
 
 resource "azuredevops_git_repository_file" "pipeline_file" {
-  for_each = azuredevops_git_repository.template_repo
-  # for_each            = { for r in azuredevops_git_repository.template_repo : r.name => r if r.initialization[0].init_type != "Uninitialized" }
+  for_each            = azuredevops_git_repository.template_repo
+  depends_on          = [null_resource.push_repo, ]
   repository_id       = each.value.id
   file                = local.main_pipieline_file
   content             = file("${path.module}/azure-pipelines.yml")
@@ -72,8 +72,7 @@ resource "azuredevops_git_repository_file" "pipeline_file" {
   overwrite_on_create = false
 }
 resource "azuredevops_git_repository_file" "pipeline_file_template" {
-  for_each = azuredevops_git_repository.template_repo
-  # for_each            = { for r in azuredevops_git_repository.template_repo : r.name => r if r.initialization[0].init_type != "Uninitialized" }
+  for_each            = azuredevops_git_repository.template_repo
   repository_id       = each.value.id
   file                = join("/", [local.repo_meta_folder, "earthly-install-template.yml"])
   content             = <<EOF
@@ -91,8 +90,7 @@ steps:
 
 resource "null_resource" "push_repo" {
   for_each = { for r in azuredevops_git_repository.template_repo : r.name => r if r.initialization[0].init_type == "Uninitialized" }
-  depends_on = [azuredevops_git_repository_file.pipeline_file]
-  
+
   provisioner "local-exec" {
     working_dir = var.template_repos[each.value.name].template_folder_path
     command     = <<EOT
