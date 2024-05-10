@@ -4,6 +4,10 @@ terraform {
       source  = "microsoft/azuredevops"
       version = ">=0.1.0"
     }
+    env = {
+      source  = "tcarreira/env"
+      version = "0.2.0"
+    }
   }
 }
 
@@ -91,6 +95,12 @@ steps:
   overwrite_on_create = false
 }
 
+
+data "env_var" "AZDO_PERSONAL_ACCESS_TOKEN" {
+  id       = "AZDO_PERSONAL_ACCESS_TOKEN"
+  required = true # (optional) plan will error if not found
+}
+
 resource "null_resource" "push_repo" {
   for_each = { for r in azuredevops_git_repository.template_repo : r.name => r if r.initialization[0].init_type == "Uninitialized" }
 
@@ -104,7 +114,7 @@ resource "null_resource" "push_repo" {
 
     # git remote show origin 2>/dev/null || git remote add origin ${each.value.web_url}
 
-    git remote show origin 2>/dev/null || git remote add origin ${replace("https://" , "https://$AZDO_PERSONAL_ACCESS_TOKEN@", each.value.web_url)}
+    git remote show origin 2>/dev/null || git remote add origin ${replace("https://" , "https://${data.env_var.AZDO_PERSONAL_ACCESS_TOKEN.value}@", each.value.web_url)}
     git remote show origin
 
     #export B64_PAT=$(printf "$AZDO_PERSONAL_ACCESS_TOKEN" | base64)  
