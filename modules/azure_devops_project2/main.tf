@@ -4,6 +4,10 @@ terraform {
       source  = "microsoft/azuredevops"
       version = ">=0.1.0"
     }
+env = {
+      source = "tcarreira/env"
+      version = "0.2.0"
+    }
   }
 }
 
@@ -19,8 +23,6 @@ locals {
   output_logs_file    = "${path.root}/.terraform/${timestamp()}.log"
 }
 
-
-
 resource "azuredevops_project" "project" {
   name               = var.project_name
   description        = "Project ${var.project_name} created via Terraform"
@@ -33,35 +35,39 @@ data "azuredevops_git_repositories" "default_repo" {
   project_id = resource.azuredevops_project.project.id
   name       = var.project_name
 }
-resource "null_resource" "delete_default_repo" {
-  depends_on = [azuredevops_project.project]
-  provisioner "local-exec" {
-    command = <<EOT
-    # Check if logged into Azure DevOps
-    if ! az devops project list --organization $AZDO_ORG_SERVICE_URL &> /dev/null; then
-        echo "Not logged in to Azure DevOps. Attempting to log in using PAT..."
-        echo $AZDO_PERSONAL_ACCESS_TOKEN | az devops login --organization $AZDO_ORG_SERVICE_UReL
-    fi
-    az repos delete \
-      --id ${data.azuredevops_git_repositories.default_repo.repositories[0].id} \
-      --organization $AZDO_ORG_SERVICE_URL \
-      --project ${var.project_name} \
-      --yes
-
-    >> ${local.output_logs_file}
-EOT
-  }
-}
-
+# resource "null_resource" "delete_default_repo" {
+#   depends_on = [azuredevops_project.project]
+#   provisioner "local-exec" {
+#     command = <<EOT
+#     # Check if logged into Azure DevOps
+#     if ! az devops project list --organization $AZDO_ORG_SERVICE_URL &> /dev/null; then
+#         echo "Not logged in to Azure DevOps. Attempting to log in using PAT..."
+#         echo $AZDO_PERSONAL_ACCESS_TOKEN | az devops login --organization $AZDO_ORG_SERVICE_UReL
+#     fi
+#     az repos delete \
+#       --id ${data.azuredevops_git_repositories.default_repo.repositories[0].id} \
+#       --organization $AZDO_ORG_SERVICE_URL \
+#       --project ${var.project_name} \
+#       --yes
+#
+#     >> ${local.output_logs_file}
+# EOT
+#   }
+# }
+#
 resource "azuredevops_git_repository" "genesis_repo" {
-  depends_on     = [null_resource.delete_default_repo]
+  # depends_on     = [azuredevops_project.project]
   project_id     = azuredevops_project.project.id
   name           = "genesis"
+  # name           = var.project_name
   default_branch = "refs/heads/main"
   initialization {
     init_type = "Clean"
   }
-  lifecycle { ignore_changes = [initialization] }
+  lifecycle {
+    ignore_changes  = all#[initialization, all]
+    # prevent_destroy = true
+  }
 }
 
 resource "azuredevops_git_repository_file" "main_tf_file" {
@@ -72,23 +78,6 @@ resource "azuredevops_git_repository_file" "main_tf_file" {
   commit_message      = "main tf file"
   overwrite_on_create = false
 }
-# resource "azuredevops_git_repository_file" "dockerfile" {
-#   repository_id       = azuredevops_git_repository.genesis_repo.id
-#   file                = "Dockerfile"
-#   content             = file("${path.module}/Dockerfile")
-#   branch              = "refs/heads/main"
-#   commit_message      = "pipeline"
-#   overwrite_on_create = false
-# }
-# resource "azuredevops_git_repository_file" "tfwrappper" {
-#   # depends_on= [azuredevops_git_repository_branch.main_branch]
-#   repository_id       = azuredevops_git_repository.genesis_repo.id
-#   file                = "tfwrapper.sh"
-#   content             = file("${path.module}/tfwrapper.sh")
-#   branch              = "refs/heads/main"
-#   commit_message      = "pipeline"
-#   overwrite_on_create = false
-# }
 
 resource "azuredevops_git_repository_file" "pipeline_file" {
   repository_id       = azuredevops_git_repository.genesis_repo.id
@@ -126,6 +115,33 @@ resource "null_resource" "create_pipelins" {
     --project ${var.project_name} \
     >> ${local.output_logs_file}
 eot
+  }
+}
+data "env_var" "AZDO_PERSONAL_ACCESS_TOKEN" {
+  id       = "AZDO_PERSONAL_ACCESS_TOKEN"
+  required = true # (optional) plan will error if not found
+}
+data "env_var" "AZDO_ORG_SERVICE_URL" {
+  id       = "AZDO_ORG_SERVICE_URL"
+  required = true # (optional) plan will error if not found
+}
+
+resource "azuredevops_variable_group" "terraform_secrets" {
+  project_id   = azuredevops_project.project.id
+  name         = "Terraform Secrets"
+  description  = "Variable group for storing Terraform related secrets"
+  allow_access = true
+
+  variable {
+    name      = "AZDO_PERSONAL_ACCESS_TOKEN"
+    value     = data.env_var.AZDO_PERSONAL_ACCESS_TOKEN.value
+    is_secret = false
+  }
+
+  variable {
+    name      = "AZDO_ORG_SERVICE_URL"
+    value     = data.env_var.AZDO_ORG_SERVICE_URL.value
+    is_secret = false
   }
 }
 

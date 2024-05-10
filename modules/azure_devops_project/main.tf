@@ -44,18 +44,14 @@ variable "template_repos" {
   }
 }
 
-resource "azuredevops_project" "project" {
-  name               = var.project_name
-  description        = "Project created via Terraform"
-  visibility         = "private"
-  version_control    = "Git"
-  work_item_template = "Agile"
+data "azuredevops_project" "project" {
+  name = var.project_name
 }
 
 resource "azuredevops_git_repository" "template_repo" {
   for_each = var.template_repos
 
-  project_id = azuredevops_project.project.id
+  project_id = data.azuredevops_project.project.id
   name       = each.value.repo_name
   # default_branch = "refs/heads/main"
   initialization {
@@ -145,5 +141,5 @@ EOT
 }
 
 output "project_id" {
-  value = azuredevops_project.project.id
+  value = data.azuredevops_project.project.id
 }
