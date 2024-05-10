@@ -59,6 +59,9 @@ resource "azuredevops_git_repository" "template_repo" {
     source_type = each.value.init_type == "Import" ? "Git" : null
     source_url  = each.value.init_type == "Import" ? each.value.source_url : null
   }
+  lifecycle {
+    prevent_destroy = true
+  }
 }
 
 resource "azuredevops_git_repository_file" "pipeline_file" {
@@ -105,6 +108,7 @@ resource "null_resource" "push_repo" {
 
     git config --global user.email "ci@pipeline.com" 
     git config --global user.name "genesis pipeline"
+    git checkout -b main 
 
     git add .
     git commit -m "Initial commit"
