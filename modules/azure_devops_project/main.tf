@@ -95,6 +95,7 @@ resource "null_resource" "push_repo" {
     working_dir = var.template_repos[each.value.name].template_folder_path
     command     = <<EOT
     #push to the repo from azuredevops_git_repository.template_repo
+    mkdir -p ~/.ssh
     ssh-keygen -F ssh.dev.azure.com || ssh-keyscan ssh.dev.azure.com >> ~/.ssh/known_hosts
 
     git remote show origin || git remote add origin ${each.value.ssh_url}

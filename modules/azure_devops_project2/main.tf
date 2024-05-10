@@ -4,8 +4,8 @@ terraform {
       source  = "microsoft/azuredevops"
       version = ">=0.1.0"
     }
-env = {
-      source = "tcarreira/env"
+    env = {
+      source  = "tcarreira/env"
       version = "0.2.0"
     }
   }
@@ -35,37 +35,37 @@ data "azuredevops_git_repositories" "default_repo" {
   project_id = resource.azuredevops_project.project.id
   name       = var.project_name
 }
-# resource "null_resource" "delete_default_repo" {
-#   depends_on = [azuredevops_project.project]
-#   provisioner "local-exec" {
-#     command = <<EOT
-#     # Check if logged into Azure DevOps
-#     if ! az devops project list --organization $AZDO_ORG_SERVICE_URL &> /dev/null; then
-#         echo "Not logged in to Azure DevOps. Attempting to log in using PAT..."
-#         echo $AZDO_PERSONAL_ACCESS_TOKEN | az devops login --organization $AZDO_ORG_SERVICE_UReL
-#     fi
-#     az repos delete \
-#       --id ${data.azuredevops_git_repositories.default_repo.repositories[0].id} \
-#       --organization $AZDO_ORG_SERVICE_URL \
-#       --project ${var.project_name} \
-#       --yes
-#
-#     >> ${local.output_logs_file}
-# EOT
-#   }
-# }
-#
+resource "null_resource" "delete_default_repo" {
+  depends_on = [azuredevops_project.project]
+  provisioner "local-exec" {
+    command = <<EOT
+    # Check if logged into Azure DevOps
+    if ! az devops project list --organization $AZDO_ORG_SERVICE_URL &> /dev/null; then
+        echo "Not logged in to Azure DevOps. Attempting to log in using PAT..."
+        echo $AZDO_PERSONAL_ACCESS_TOKEN | az devops login --organization $AZDO_ORG_SERVICE_UReL
+    fi
+    az repos delete \
+      --id ${data.azuredevops_git_repositories.default_repo.repositories[0].id} \
+      --organization $AZDO_ORG_SERVICE_URL \
+      --project ${var.project_name} \
+      --yes
+
+    >> ${local.output_logs_file}
+EOT
+  }
+}
+
 resource "azuredevops_git_repository" "genesis_repo" {
   # depends_on     = [azuredevops_project.project]
-  project_id     = azuredevops_project.project.id
-  name           = "genesis"
+  project_id = azuredevops_project.project.id
+  name       = "genesis"
   # name           = var.project_name
   default_branch = "refs/heads/main"
   initialization {
     init_type = "Clean"
   }
   lifecycle {
-    ignore_changes  = all#[initialization, all]
+    ignore_changes = all #[initialization, all]
     # prevent_destroy = true
   }
 }
@@ -73,7 +73,7 @@ resource "azuredevops_git_repository" "genesis_repo" {
 resource "azuredevops_git_repository_file" "main_tf_file" {
   repository_id       = azuredevops_git_repository.genesis_repo.id
   file                = "main.tf"
-  content             = templatefile("${path.module}/templatetf.tftpl", { project_id = azuredevops_project.project.id })
+  content             = templatefile("${path.module}/templatetf.tftpl", { project_name = azuredevops_project.project.name })
   branch              = "refs/heads/main"
   commit_message      = "main tf file"
   overwrite_on_create = false
