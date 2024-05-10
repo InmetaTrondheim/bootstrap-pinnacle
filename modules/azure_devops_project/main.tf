@@ -95,7 +95,8 @@ resource "null_resource" "push_repo" {
     working_dir = var.template_repos[each.value.name].template_folder_path
     command     = <<EOT
     #push to the repo from azuredevops_git_repository.template_repo
-    mkdir -p ~/.ssh
+    mkdir -p ~/.ssh && touch ~/.ssh/known_hosts && chmod 600 ~/.ssh/known_hosts
+
     ssh-keygen -F ssh.dev.azure.com || ssh-keyscan ssh.dev.azure.com >> ~/.ssh/known_hosts
 
     git remote show origin || git remote add origin ${each.value.ssh_url}
@@ -107,7 +108,7 @@ resource "null_resource" "push_repo" {
 
     git add .
     git commit -m "Initial commit"
-    git --set-upstream origin master -c http.extraHeader="Authorization: Basic $B64_PAT" push
+    git push origin main -c http.extraHeader="Authorization: Basic $B64_PAT" 
 EOT
   }
 }

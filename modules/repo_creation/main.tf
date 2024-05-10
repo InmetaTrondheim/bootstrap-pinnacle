@@ -43,5 +43,6 @@ resource "null_resource" "init_repository" {
 }
 
 output "initialized_folder_path" {
+  depends_on = [null_resource.init_repository]
   value = local.temp_dir
 }
