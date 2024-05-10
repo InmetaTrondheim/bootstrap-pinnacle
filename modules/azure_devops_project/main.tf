@@ -91,6 +91,8 @@ steps:
 
 resource "null_resource" "push_repo" {
   for_each = { for r in azuredevops_git_repository.template_repo : r.name => r if r.initialization[0].init_type == "Uninitialized" }
+  depends_on = [azuredevops_git_repository_file.pipeline_file]
+  
   provisioner "local-exec" {
     working_dir = var.template_repos[each.value.name].template_folder_path
     command     = <<EOT
@@ -100,11 +102,14 @@ resource "null_resource" "push_repo" {
 
     git remote show origin || git remote add origin ${each.value.ssh_url}
 
-    B64_PAT=$(printf "$(echo $AZDO_PERSONAL_ACCESS_TOKEN)" | base64)  
+    B64_PAT=$(printf "$AZDO_PERSONAL_ACCESS_TOKEN" | base64)  
+
+    git config --global user.email "ci@pipeline.com" 
+    git config --global user.name "genesis pipeline"
 
     git add .
     git commit -m "Initial commit"
-    git -c http.extraHeader="Authorization: Basic $B64_PAT" push
+    git --set-upstream origin master -c http.extraHeader="Authorization: Basic $B64_PAT" push
 EOT
   }
 }

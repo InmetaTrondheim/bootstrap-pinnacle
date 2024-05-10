@@ -90,7 +90,7 @@ resource "azuredevops_git_repository_file" "pipeline_file" {
 
 resource "null_resource" "create_pipelins" {
   # working_dir = var.template_repos[index(var.template_repos.*.repo_name, each.value.name)].template_folder_path
-  depends_on = [azuredevops_git_repository_file.pipeline_file]
+  depends_on = [azuredevops_git_repository_file.pipeline_file, azuredevops_variable_group.terraform_secrets]
   provisioner "local-exec" {
     command = <<eot
     # check if logged into azure devops
