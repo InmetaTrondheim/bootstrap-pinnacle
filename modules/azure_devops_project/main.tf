@@ -108,7 +108,7 @@ resource "null_resource" "push_repo" {
 
     git add .
     git commit -m "Initial commit"
-    git push origin main -c http.extraHeader="Authorization: Basic $B64_PAT" 
+    git -c http.extraHeader="Authorization: Basic $B64_PAT" push origin main
 EOT
   }
 }
