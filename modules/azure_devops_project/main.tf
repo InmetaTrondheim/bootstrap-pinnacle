@@ -67,6 +67,7 @@ resource "azuredevops_git_repository" "template_repo" {
 resource "azuredevops_git_repository_file" "pipeline_file" {
   for_each            = azuredevops_git_repository.template_repo
   depends_on          = [null_resource.push_repo, ]
+
   repository_id       = each.value.id
   file                = local.main_pipieline_file
   content             = file("${path.module}/azure-pipelines.yml")
@@ -76,6 +77,8 @@ resource "azuredevops_git_repository_file" "pipeline_file" {
 }
 resource "azuredevops_git_repository_file" "pipeline_file_template" {
   for_each            = azuredevops_git_repository.template_repo
+  depends_on          = [null_resource.push_repo, ]
+
   repository_id       = each.value.id
   file                = join("/", [local.repo_meta_folder, "earthly-install-template.yml"])
   content             = <<EOF
@@ -120,10 +123,10 @@ EOT
 resource "null_resource" "create_pipelins" {
   for_each = azuredevops_git_repository.template_repo
 
-  # working_dir = var.template_repos[index(var.template_repos.*.repo_name, each.value.name)].template_folder_path
-  depends_on = [null_resource.push_repo,azuredevops_git_repository_file.pipeline_file]
+  depends_on = [null_resource.push_repo, azuredevops_git_repository_file.pipeline_file]
   provisioner "local-exec" {
     command = <<EOT
+    sleep 3
     # Check if logged into Azure DevOps
     if ! az devops project list --organization $AZDO_ORG_SERVICE_URL &> /dev/null; then
         echo "Not logged in to Azure DevOps. Attempting to log in using PAT..."
