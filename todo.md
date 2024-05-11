@@ -22,6 +22,7 @@
 - [ ] create terrafrom file with frontend app, backend app, and db
 - [ ] set up secrets in the deploy piplene(IE, db connection string) 
 - [ ] this is dependent on build artifacts from frontend and backend being available
+- [ ] figgure out how to do staging/prod/sandbox seperation and automatin
 
 ### pipeline:
 - [x] run pipelines by default on frontend and backend
