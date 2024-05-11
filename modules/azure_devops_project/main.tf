@@ -160,6 +160,7 @@ resource "null_resource" "create_pipelins" {
         --repository-type tfsgit \
         --organization $AZDO_ORG_SERVICE_URL \
         --yaml-path ${local.main_pipieline_file} \
+        --branch main \
         --project ${var.project_name}   
 	if [ $? -ne 0 ]; then
           echo "Failed to create pipeline backend."
