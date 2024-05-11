@@ -112,6 +112,7 @@ resource "null_resource" "push_repo" {
     git add .
     git commit -m "Initial commit"
     git push origin main
+    sleep 3
 EOT
   }
 }
