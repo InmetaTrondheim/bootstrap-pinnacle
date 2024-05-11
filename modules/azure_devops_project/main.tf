@@ -121,7 +121,7 @@ resource "null_resource" "create_pipelins" {
   for_each = azuredevops_git_repository.template_repo
 
   # working_dir = var.template_repos[index(var.template_repos.*.repo_name, each.value.name)].template_folder_path
-  depends_on = [azuredevops_git_repository_file.pipeline_file]
+  depends_on = [null_resource.push_repo,azuredevops_git_repository_file.pipeline_file]
   provisioner "local-exec" {
     command = <<EOT
     # Check if logged into Azure DevOps
