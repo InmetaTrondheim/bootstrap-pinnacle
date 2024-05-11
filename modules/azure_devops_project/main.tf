@@ -108,6 +108,12 @@ FROM earthly/earthly:latest
 WORKDIR /code
 COPY . .
 
+validate-repo-setup:
+    # probobly make this a import from a shared repo
+    RUN echo setting up git hooks
+    RUN echo checking that expected earthly targets exist: [build, immediate-tests, publish, comprehensive-tests, deploy]
+    RUN echo checking that output of build is a docker image
+ 
 # Build target
 build:
     RUN echo running \"BUILD  +build\"
