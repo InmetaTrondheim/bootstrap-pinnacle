@@ -161,7 +161,7 @@ resource "null_resource" "create_pipelins" {
         --organization $AZDO_ORG_SERVICE_URL \
         --yaml-path ${local.main_pipieline_file} \
         --project ${var.project_name}   
-        if [ $? -ne 0 ]; then; echo "Failed to create pipeline ${each.key}."; fi
+        if [ $? -ne 0 ]; then; echo "Failed to create pipeline ${each.key}."; fi;
     fi
 
     set +x  # Turn off verbose output
