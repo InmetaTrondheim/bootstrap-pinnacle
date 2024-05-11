@@ -145,21 +145,26 @@ resource "null_resource" "create_pipelins" {
   provisioner "local-exec" {
     command = <<EOT
     sleep 3
-
-    # Check if the pipeline exists using az pipelines show
-    if az pipelines show --name ${each.key} --organization $AZDO_ORG_SERVICE_URL --project ${var.project_name} &> /dev/null; then
-        echo "Pipeline already exists for ${var.project_name}. Exiting."
+    set -x  # This enables a more verbose shell output to trace commands.
+    
+    echo "Checking if pipeline ${each.key} exists..."
+    az pipelines show --name ${each.key} --organization $AZDO_ORG_SERVICE_URL --project ${var.project_name}
+    if [ $? -eq 0 ]; then
+        echo "${each.key} pipeline exists. Exiting."
         exit 0
+    else
+        echo "${each.key} pipeline does not exist. Attempting to create..."
+        az pipelines create \
+        --name ${each.key} \
+        --repository ${each.value.name} \
+        --repository-type tfsgit \
+        --organization $AZDO_ORG_SERVICE_URL \
+        --yaml-path ${local.main_pipieline_file} \
+        --project ${var.project_name}   
+        if [ $? -ne 0 ]; then; echo "Failed to create pipeline ${each.key}."; fi
     fi
 
-    # Run the command to create the pipeline
-    az pipelines create \
-    --name ${each.key} \
-    --repository ${each.value.name} \
-    --repository-type tfsgit \
-    --organization $AZDO_ORG_SERVICE_URL \
-    --yaml-path ${local.main_pipieline_file} \
-    --project ${var.project_name}
+    set +x  # Turn off verbose output
 EOT
   }
 }
