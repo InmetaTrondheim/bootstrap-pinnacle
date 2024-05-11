@@ -120,22 +120,35 @@ EOT
   }
 }
 
-resource "null_resource" "create_pipelins" {
-  for_each = azuredevops_git_repository.template_repo
-
+resource "null_resource" "az_login" {
   depends_on = [null_resource.push_repo, azuredevops_git_repository_file.pipeline_file]
   provisioner "local-exec" {
     command = <<EOT
-    sleep 3
     # Check if logged into Azure DevOps
     if ! az devops project list --organization $AZDO_ORG_SERVICE_URL &> /dev/null; then
         echo "Not logged in to Azure DevOps. Attempting to log in using PAT..."
-        echo $AZDO_PERSONAL_ACCESS_TOKEN | az devops login --organization $AZDO_ORG_SERVICE_URL
+        if echo $AZDO_PERSONAL_ACCESS_TOKEN | az devops login --organization $AZDO_ORG_SERVICE_URL; then
+            echo "Logged in successfully."
+        else
+            echo "Failed to log in. Check if the PAT is correct and active."
+            exit 1
+        fi
     fi
+EOT
+  }
+}
+
+resource "null_resource" "create_pipelins" {
+  for_each = azuredevops_git_repository.template_repo
+
+  depends_on = [null_resource.az_login, null_resource.push_repo, azuredevops_git_repository_file.pipeline_file]
+  provisioner "local-exec" {
+    command = <<EOT
+    sleep 3
 
     # Check if the pipeline exists using az pipelines show
     if az pipelines show --name ${each.key} --organization $AZDO_ORG_SERVICE_URL --project ${var.project_name} &> /dev/null; then
-        echo "Pipeline already exists for ${var.project_name}. Exiting." | tee >> ${local.output_logs_file}
+        echo "Pipeline already exists for ${var.project_name}. Exiting."
         exit 0
     fi
 
@@ -146,8 +159,7 @@ resource "null_resource" "create_pipelins" {
     --repository-type tfsgit \
     --organization $AZDO_ORG_SERVICE_URL \
     --yaml-path ${local.main_pipieline_file} \
-    --project ${var.project_name} \
-    >> ${local.output_logs_file}
+    --project ${var.project_name}
 EOT
   }
 }
