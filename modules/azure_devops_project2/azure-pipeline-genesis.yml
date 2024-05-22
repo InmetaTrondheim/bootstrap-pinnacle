@@ -1,5 +1,6 @@
 pool:
-  vmImage: 'ubuntu-latest'
+  name: 'GenesisPool'
+
 
 variables:
   - group: Terraform Secrets  

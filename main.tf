@@ -4,6 +4,6 @@
 
 module "azure_devops_project" {
   source       = "./modules/azure_devops_project2"
-  project_name = "tfCreatedProLaptop"
+  project_name = "tfCreatedProPc"
 }
 
