@@ -1,5 +1,5 @@
 pool:
-  name: 'GenesisPool'
+  name: 'GenesisPool-${project_name}'
 
 
 variables:
@@ -14,9 +14,6 @@ stages:
         steps:
           - checkout: self
           - script: | 
-              #export AZDO_PERSONAL_ACCESS_TOKEN=$SECRET_AZDO_PERSONAL_ACCESS_TOKEN
-              # docker run --env-file <(env | grep AZDO) -v $(pwd):/app ghcr.io/inmetatrondheim/bootstrap-pinnacle:main plan
-              env | grep AZDO
               terraform init
               terraform plan
             displayName: 'Run Tofu Plan'
@@ -29,9 +26,6 @@ stages:
         steps:
           - checkout: self
           - script: |
-              #export AZDO_PERSONAL_ACCESS_TOKEN=$SECRET_AZDO_PERSONAL_ACCESS_TOKEN
-              # docker run --env-file <(env | grep AZDO) -v $(pwd):/app ghcr.io/inmetatrondheim/bootstrap-pinnacle:main apply
-              env | grep AZDO
               terraform init
               terraform apply -auto-approve
             displayName: 'Run Tofu Apply'

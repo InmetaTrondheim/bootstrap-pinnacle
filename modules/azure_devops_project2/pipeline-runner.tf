@@ -5,17 +5,24 @@ locals {
     "sudo sh get-docker.sh",
     "sudo systemctl enable docker",
     "sudo systemctl start docker",
-    "curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash", 
-    "bash",
-    "az extension add --name  azure-devops",
-
-    "wget https://vstsagentpackage.azureedge.net/agent/2.170.1/vsts-agent-linux-x64-2.170.1.tar.gz",
-    "tar zxvf vsts-agent-linux-x64-2.170.1.tar.gz",
-    "./config.sh --unattended --url ${data.env_var.AZDO_ORG_SERVICE_URL.value} --auth pat --token ${data.env_var.AZDO_PERSONAL_ACCESS_TOKEN.value} --pool ${azuredevops_agent_pool.pool.name} --agent $(hostname)",
-
-    "sudo ./svc.sh install",
-    "sudo ./svc.sh start",
+    "sudo usermod -aG docker adminuser",  // Add adminuser to docker group
+    "curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash"
   ]
+
+  command_parts_nr2 = [
+    "cd",
+    "az extension add --name azure-devops",
+    "wget https://vstsagentpackage.azureedge.net/agent/3.240.0/vsts-agent-linux-x64-3.240.0.tar.gz",
+
+    "tar zxvf vsts-agent-linux-x64-3.240.0.tar.gz",
+    "sudo ./bin/installdependencies.sh",
+    "./config.sh --unattended --url ${data.env_var.AZDO_ORG_SERVICE_URL.value} --auth pat --token ${data.env_var.AZDO_PERSONAL_ACCESS_TOKEN.value} --pool ${azuredevops_agent_pool.pool.name} --agent $(hostname)-${formatdate("YY--MM--DD-hh-mm", timestamp())}",
+    "sudo ./svc.sh install",
+    "sudo ./svc.sh start"
+  ]
+
+  full_command = concat(local.command_parts, ["sudo -i -u adminuser bash -c '${join(" && ", local.command_parts_nr2)}'"])
+
 }
 
 resource "azurerm_virtual_network" "vnet" {
@@ -32,7 +39,7 @@ resource "azurerm_subnet" "subnet" {
   address_prefixes     = ["10.0.1.0/24"]
 }
 
-# ---
+# uncomment block to allow ssh access to machine
 resource "azurerm_public_ip" "agent_public_ip" {
   name                = "agentPublicIP"
   location            = azurerm_resource_group.rg.location
@@ -62,7 +69,6 @@ resource "azurerm_network_interface_security_group_association" "agent_nic_nsg" 
   network_interface_id      = azurerm_network_interface.agent_nic.id
   network_security_group_id = azurerm_network_security_group.agent_nsg.id
 }
-
 # ---
 
 resource "azurerm_network_interface" "agent_nic" {
@@ -79,12 +85,12 @@ resource "azurerm_network_interface" "agent_nic" {
 }
 
 resource "azuredevops_agent_pool" "pool" {
-  name = "GenesisPool"
+  name = "GenesisPool-${var.project_name}"
   auto_provision = true
 }
 
 resource "azurerm_linux_virtual_machine" "agent_vm" {
-  name                = "example-vm"
+  name                = "pipeline-runner"
   resource_group_name = azurerm_resource_group.rg.name
   location            = azurerm_resource_group.rg.location
   size                = "Standard_DS1_v2"
@@ -121,11 +127,6 @@ resource "azurerm_virtual_machine_extension" "agent_setup" {
   type                 = "CustomScript"
   type_handler_version = "2.0"
 
-
-  settings = <<SETTINGS
-    {
-	"commandToExecute": "${join(" && ", local.command_parts)}"
-    }
-SETTINGS
+  settings = jsonencode({ commandToExecute = join(" && ", local.full_command) })
 }
 

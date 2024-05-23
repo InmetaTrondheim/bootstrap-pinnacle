@@ -12,6 +12,16 @@ resource "azuredevops_project" "project" {
   work_item_template = "Agile"
 }
 
+resource "azuredevops_project_pipeline_settings" "example" {
+  project_id = azuredevops_project.project.id
+
+  enforce_job_scope = false
+  # enforce_referenced_repo_scoped_token = false
+  # enforce_settable_var = true
+  # publish_pipeline_metadata = false
+  # status_badges_are_private = true
+}
+
 data "azuredevops_git_repositories" "default_repo" {
   project_id = resource.azuredevops_project.project.id
   name       = var.project_name
@@ -60,7 +70,7 @@ resource "azuredevops_git_repository_file" "main_tf_file" {
 resource "azuredevops_git_repository_file" "pipeline_file" {
   repository_id       = azuredevops_git_repository.genesis_repo.id
   file                = local.main_pipieline_file
-  content             = file("${path.module}/azure-pipeline-genesis.yml")
+  content             = templatefile("${path.module}/azure-pipeline-genesis.yml", {project_name = azuredevops_project.project.name})
   branch              = "refs/heads/main"
   commit_message      = "pipeline"
   overwrite_on_create = false
