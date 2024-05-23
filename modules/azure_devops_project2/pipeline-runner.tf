@@ -5,7 +5,7 @@ locals {
     "sudo sh get-docker.sh",
     "sudo systemctl enable docker",
     "sudo systemctl start docker",
-    "sudo usermod -aG docker adminuser",  // Add adminuser to docker group
+    "sudo usermod -aG docker adminuser", // Add adminuser to docker group
     "curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash"
   ]
 
@@ -85,7 +85,7 @@ resource "azurerm_network_interface" "agent_nic" {
 }
 
 resource "azuredevops_agent_pool" "pool" {
-  name = "GenesisPool-${var.project_name}"
+  name           = "GenesisPool-${var.project_name}"
   auto_provision = true
 }
 
@@ -119,7 +119,7 @@ resource "azurerm_linux_virtual_machine" "agent_vm" {
   disable_password_authentication = true
 }
 
-resource "azurerm_virtual_machine_extension" "agent_setup" { 
+resource "azurerm_virtual_machine_extension" "agent_setup" {
   depends_on           = [azuredevops_project.project, azuredevops_agent_pool.pool]
   name                 = "configure-devops-agent"
   virtual_machine_id   = azurerm_linux_virtual_machine.agent_vm.id

@@ -47,8 +47,8 @@ EOT
 }
 
 resource "azuredevops_git_repository" "genesis_repo" {
-  project_id = azuredevops_project.project.id
-  name       = "genesis"
+  project_id     = azuredevops_project.project.id
+  name           = "genesis"
   default_branch = "refs/heads/main"
   initialization {
     init_type = "Clean"
@@ -70,7 +70,7 @@ resource "azuredevops_git_repository_file" "main_tf_file" {
 resource "azuredevops_git_repository_file" "pipeline_file" {
   repository_id       = azuredevops_git_repository.genesis_repo.id
   file                = local.main_pipieline_file
-  content             = templatefile("${path.module}/azure-pipeline-genesis.yml", {project_name = azuredevops_project.project.name})
+  content             = templatefile("${path.module}/azure-pipeline-genesis.yml", { project_name = azuredevops_project.project.name })
   branch              = "refs/heads/main"
   commit_message      = "pipeline"
   overwrite_on_create = false

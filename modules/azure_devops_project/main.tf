@@ -65,19 +65,19 @@ resource "azuredevops_git_repository" "template_repo" {
 }
 
 resource "azuredevops_git_repository_file" "pipeline_file" {
-  for_each            = azuredevops_git_repository.template_repo
-  depends_on          = [null_resource.push_repo, ]
+  for_each   = azuredevops_git_repository.template_repo
+  depends_on = [null_resource.push_repo, ]
 
   repository_id       = each.value.id
   file                = local.main_pipieline_file
-  content             = file("${path.module}/azure-pipelines.yml")
+  content             = templatefile("${path.module}/azure-pipelines.yml", { project_name = var.project_name })
   branch              = "refs/heads/main"
   commit_message      = "pipeline"
   overwrite_on_create = false
 }
 resource "azuredevops_git_repository_file" "pipeline_file_template" {
-  for_each            = azuredevops_git_repository.template_repo
-  depends_on          = [null_resource.push_repo, ]
+  for_each   = azuredevops_git_repository.template_repo
+  depends_on = [null_resource.push_repo, ]
 
   repository_id       = each.value.id
   file                = join("/", [local.repo_meta_folder, "earthly-install-template.yml"])
@@ -94,8 +94,8 @@ steps:
   overwrite_on_create = false
 }
 resource "azuredevops_git_repository_file" "earthfile" {
-  for_each            = azuredevops_git_repository.template_repo
-  depends_on          = [null_resource.push_repo, ]
+  for_each   = azuredevops_git_repository.template_repo
+  depends_on = [null_resource.push_repo, ]
 
   repository_id       = each.value.id
   file                = "Earthfile"
