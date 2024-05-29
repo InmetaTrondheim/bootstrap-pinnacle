@@ -16,7 +16,7 @@ locals {
 
     "tar zxvf vsts-agent-linux-x64-3.240.0.tar.gz",
     "sudo ./bin/installdependencies.sh",
-    "./config.sh --unattended --url ${data.env_var.AZDO_ORG_SERVICE_URL.value} --auth pat --token ${data.env_var.AZDO_PERSONAL_ACCESS_TOKEN.value} --pool ${azuredevops_agent_pool.pool.name} --agent $(hostname)-${formatdate("YY--MM--DD-hh-mm", timestamp())}",
+    "./config.sh --unattended --url ${data.env_var.AZDO_ORG_SERVICE_URL.value} --auth pat --token ${data.env_var.AZDO_PERSONAL_ACCESS_TOKEN.value} --pool ${azuredevops_agent_pool.pool.name} --agent $(hostname)-${formatdate("YY-MM-DD-hh-mm", timestamp())}",
     "sudo ./svc.sh install",
     "sudo ./svc.sh start"
   ]
@@ -40,35 +40,35 @@ resource "azurerm_subnet" "subnet" {
 }
 
 # uncomment block to allow ssh access to machine
-resource "azurerm_public_ip" "agent_public_ip" {
-  name                = "agentPublicIP"
-  location            = azurerm_resource_group.rg.location
-  resource_group_name = azurerm_resource_group.rg.name
-  allocation_method   = "Static"
-}
-
-resource "azurerm_network_security_group" "agent_nsg" {
-  name                = "agentNSG"
-  location            = azurerm_resource_group.rg.location
-  resource_group_name = azurerm_resource_group.rg.name
-
-  security_rule {
-    name                       = "SSH"
-    priority                   = 1001
-    direction                  = "Inbound"
-    access                     = "Allow"
-    protocol                   = "Tcp"
-    source_port_range          = "*"
-    destination_port_range     = "22"
-    source_address_prefix      = "*"
-    destination_address_prefix = "*"
-  }
-}
-
-resource "azurerm_network_interface_security_group_association" "agent_nic_nsg" {
-  network_interface_id      = azurerm_network_interface.agent_nic.id
-  network_security_group_id = azurerm_network_security_group.agent_nsg.id
-}
+# resource "azurerm_public_ip" "agent_public_ip" {
+#   name                = "agentPublicIP"
+#   location            = azurerm_resource_group.rg.location
+#   resource_group_name = azurerm_resource_group.rg.name
+#   allocation_method   = "Static"
+# }
+#
+# resource "azurerm_network_security_group" "agent_nsg" {
+#   name                = "agentNSG"
+#   location            = azurerm_resource_group.rg.location
+#   resource_group_name = azurerm_resource_group.rg.name
+#
+#   security_rule {
+#     name                       = "SSH"
+#     priority                   = 1001
+#     direction                  = "Inbound"
+#     access                     = "Allow"
+#     protocol                   = "Tcp"
+#     source_port_range          = "*"
+#     destination_port_range     = "22"
+#     source_address_prefix      = "*"
+#     destination_address_prefix = "*"
+#   }
+# }
+#
+# resource "azurerm_network_interface_security_group_association" "agent_nic_nsg" {
+#   network_interface_id      = azurerm_network_interface.agent_nic.id
+#   network_security_group_id = azurerm_network_security_group.agent_nsg.id
+# }
 # ---
 
 resource "azurerm_network_interface" "agent_nic" {
@@ -80,13 +80,29 @@ resource "azurerm_network_interface" "agent_nic" {
     name                          = "internal"
     subnet_id                     = azurerm_subnet.subnet.id
     private_ip_address_allocation = "Dynamic"
-    public_ip_address_id          = azurerm_public_ip.agent_public_ip.id
+    # public_ip_address_id          = azurerm_public_ip.agent_public_ip.id
   }
 }
 
 resource "azuredevops_agent_pool" "pool" {
   name           = "GenesisPool-${var.project_name}"
-  auto_provision = true
+}
+
+resource "azuredevops_agent_queue" "queue" {
+  project_id    = azuredevops_project.project.id
+  agent_pool_id = azuredevops_agent_pool.pool.id
+}
+
+resource "azuredevops_resource_authorization" "auth" {
+  project_id  = azuredevops_project.project.id
+  resource_id = azuredevops_agent_queue.queue.id
+  type        = "queue"
+  authorized  = true
+}
+resource "azuredevops_pipeline_authorization" "auth" {
+  project_id  = azuredevops_project.project.id
+  resource_id = azuredevops_agent_queue.queue.id
+  type        = "queue"
 }
 
 resource "azurerm_linux_virtual_machine" "agent_vm" {
@@ -128,5 +144,8 @@ resource "azurerm_virtual_machine_extension" "agent_setup" {
   type_handler_version = "2.0"
 
   settings = jsonencode({ commandToExecute = join(" && ", local.full_command) })
+  lifecycle {
+    ignore_changes = all
+  }
 }
 

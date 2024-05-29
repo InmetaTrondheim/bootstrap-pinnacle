@@ -77,6 +77,7 @@ resource "azuredevops_git_repository_file" "pipeline_file" {
 }
 
 resource "null_resource" "create_pipelins" {
+  # TODO: use this instesad https://registry.terraform.io/providers/microsoft/azuredevops/latest/docs/resources/build_definitio
   depends_on = [azuredevops_git_repository_file.pipeline_file, azuredevops_variable_group.terraform_secrets]
   provisioner "local-exec" {
     command = <<eot
