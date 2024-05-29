@@ -85,7 +85,7 @@ resource "azurerm_network_interface" "agent_nic" {
 }
 
 resource "azuredevops_agent_pool" "pool" {
-  name           = "GenesisPool-${var.project_name}"
+  name = "GenesisPool-${var.project_name}"
 }
 
 resource "azuredevops_agent_queue" "queue" {
