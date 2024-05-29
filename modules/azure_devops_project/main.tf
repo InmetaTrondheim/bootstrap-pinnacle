@@ -185,38 +185,40 @@ EOT
   }
 }
 
-resource "null_resource" "create_pipelins" {
+
+resource "azuredevops_build_definition" "example" {
   for_each = azuredevops_git_repository.template_repo
 
+  project_id = data.azuredevops_project.project.id
+  name       = each.key
   depends_on = [null_resource.az_login, null_resource.push_repo, azuredevops_git_repository_file.pipeline_file]
-  provisioner "local-exec" {
-    command = <<EOT
-    sleep 3
-    set -x  # This enables a more verbose shell output to trace commands.
-    
-    echo "Checking if pipeline ${each.key} exists..."
-    az pipelines show --name ${each.key} --organization $AZDO_ORG_SERVICE_URL --project ${var.project_name}
-    if [ $? -eq 0 ]; then
-        echo "${each.key} pipeline exists. Exiting."
-        exit 0
-    else
-        echo "${each.key} pipeline does not exist. Attempting to create..."
-        az pipelines create \
-        --name ${each.key} \
-        --repository ${each.value.name} \
-        --repository-type tfsgit \
-        --organization $AZDO_ORG_SERVICE_URL \
-        --yaml-path ${local.main_pipieline_file} \
-        --branch main \
-        --project ${var.project_name}   
-	if [ $? -ne 0 ]; then
-          echo "Failed to create pipeline backend."
-        fi
-    fi
 
-    set +x  # Turn off verbose output
-EOT
+  ci_trigger {
+    use_yaml = true
   }
+
+  # schedules {
+  #   branch_filter {
+  #     include = ["master"]
+  #     exclude = ["test", "regression"]
+  #   }
+  #   days_to_build              = ["Wed", "Sun"]
+  #   schedule_only_with_changes = true
+  #   start_hours                = 10
+  #   start_minutes              = 59
+  #   time_zone                  = "(UTC) Coordinated Universal Time"
+  # }
+
+  repository {
+    repo_type   = "TfsGit"
+    repo_id     = each.value.id
+    branch_name = "main"
+    yml_path    = local.main_pipieline_file
+  }
+
+  # variable_groups = [
+  #   azuredevops_variable_group.example.id
+  # ]
 }
 
 output "project_id" {

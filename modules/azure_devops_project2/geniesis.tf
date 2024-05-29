@@ -76,49 +76,67 @@ resource "azuredevops_git_repository_file" "pipeline_file" {
   overwrite_on_create = false
 }
 
-resource "null_resource" "create_pipelins" {
-  # TODO: use this instesad https://registry.terraform.io/providers/microsoft/azuredevops/latest/docs/resources/build_definitio
-  depends_on = [azuredevops_git_repository_file.pipeline_file, azuredevops_variable_group.terraform_secrets]
-  provisioner "local-exec" {
-    command = <<eot
-    # check if logged into azure devops
-    if ! az devops project list --organization $azdo_org_service_url &> /dev/null; then
-        echo "not logged in to azure devops. attempting to log in using pat..."
-        echo $azdo_personal_access_token | az devops login --organization $azdo_org_service_url
-    fi
+# resource "null_resource" "create_pipelins" {
+#   # TODO: use this instesad https://registry.terraform.io/providers/microsoft/azuredevops/latest/docs/resources/build_definitio
+#   depends_on = [azuredevops_git_repository_file.pipeline_file, azuredevops_variable_group.terraform_secrets]
+#   provisioner "local-exec" {
+#     command = <<eot
+#     # check if logged into azure devops
+#     if ! az devops project list --organization $azdo_org_service_url &> /dev/null; then
+#         echo "not logged in to azure devops. attempting to log in using pat..."
+#         echo $azdo_personal_access_token | az devops login --organization $azdo_org_service_url
+#     fi
+#
+#     # check if the pipeline exists using az pipelines show
+#     if az pipelines show --name ${azuredevops_git_repository.genesis_repo.name} --organization $AZDO_ORG_SERVICE_URL --project ${var.project_name} &> /dev/null; then
+#         echo "pipeline already exists for ${azuredevops_git_repository.genesis_repo.name}. exiting." | tee >> ${local.output_logs_file}
+#         exit 0
+#     fi
+#
+#     # run the command to create the pipeline
+#     az pipelines create \
+#     --name ${} \
+#     --repository ${azuredevops_git_repository.genesis_repo.name} \
+#     --repository-type tfsgit \
+#     --organization $AZDO_ORG_SERVICE_URL \
+#     --yaml-path ${local.main_pipieline_file} \
+#     --project ${var.project_name} \
+#     >> ${local.output_logs_file}
+# eot
+#   }
+# }
 
-    # check if the pipeline exists using az pipelines show
-    if az pipelines show --name ${azuredevops_git_repository.genesis_repo.name} --organization $AZDO_ORG_SERVICE_URL --project ${var.project_name} &> /dev/null; then
-        echo "pipeline already exists for ${azuredevops_git_repository.genesis_repo.name}. exiting." | tee >> ${local.output_logs_file}
-        exit 0
-    fi
+resource "azuredevops_build_definition" "example" {
+  project_id = azuredevops_project.project.id
+  name       = azuredevops_git_repository.genesis_repo.name
+  # path       = "\\ExampleFolder"
 
-    # run the command to create the pipeline
-    az pipelines create \
-    --name ${azuredevops_git_repository.genesis_repo.name} \
-    --repository ${azuredevops_git_repository.genesis_repo.name} \
-    --repository-type tfsgit \
-    --organization $AZDO_ORG_SERVICE_URL \
-    --yaml-path ${local.main_pipieline_file} \
-    --project ${var.project_name} \
-    >> ${local.output_logs_file}
-eot
+  ci_trigger {
+    use_yaml = true
   }
-}
-data "env_var" "AZDO_PERSONAL_ACCESS_TOKEN" {
-  id       = "AZDO_PERSONAL_ACCESS_TOKEN"
-  required = true # (optional) plan will error if not found
-}
-data "env_var" "AZDO_ORG_SERVICE_URL" {
-  id       = "AZDO_ORG_SERVICE_URL"
-  required = true # (optional) plan will error if not found
-}
 
-resource "azuredevops_variable_group" "terraform_secrets" {
-  project_id   = azuredevops_project.project.id
-  name         = "Terraform Secrets"
-  description  = "Variable group for storing Terraform related secrets"
-  allow_access = true
+  # schedules {
+  #   branch_filter {
+  #     include = ["master"]
+  #     exclude = ["test", "regression"]
+  #   }
+  #   days_to_build              = ["Wed", "Sun"]
+  #   schedule_only_with_changes = true
+  #   start_hours                = 10
+  #   start_minutes              = 59
+  #   time_zone                  = "(UTC) Coordinated Universal Time"
+  # }
+
+  repository {
+    repo_type   = "TfsGit"
+    repo_id     = azuredevops_git_repository.genesis_repo.id
+    branch_name = azuredevops_git_repository.genesis_repo.default_branch
+    yml_path    =local.main_pipieline_file
+  }
+
+  # variable_groups = [
+  #   azuredevops_variable_group.example.id
+  # ]
 
   variable {
     name      = "AZDO_PERSONAL_ACCESS_TOKEN"
@@ -132,6 +150,34 @@ resource "azuredevops_variable_group" "terraform_secrets" {
     is_secret = false
   }
 }
+
+data "env_var" "AZDO_PERSONAL_ACCESS_TOKEN" {
+  id       = "AZDO_PERSONAL_ACCESS_TOKEN"
+  required = true # (optional) plan will error if not found
+}
+data "env_var" "AZDO_ORG_SERVICE_URL" {
+  id       = "AZDO_ORG_SERVICE_URL"
+  required = true # (optional) plan will error if not found
+}
+
+# resource "azuredevops_variable_group" "terraform_secrets" {
+#   project_id   = azuredevops_project.project.id
+#   name         = "Terraform Secrets"
+#   description  = "Variable group for storing Terraform related secrets"
+#   allow_access = true
+#
+#   variable {
+#     name      = "AZDO_PERSONAL_ACCESS_TOKEN"
+#     value     = data.env_var.AZDO_PERSONAL_ACCESS_TOKEN.value
+#     is_secret = false
+#   }
+#
+#   variable {
+#     name      = "AZDO_ORG_SERVICE_URL"
+#     value     = data.env_var.AZDO_ORG_SERVICE_URL.value
+#     is_secret = false
+#   }
+# }
 
 output "project_id" {
   value = azuredevops_project.project.id

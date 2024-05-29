@@ -1,11 +1,6 @@
 pool:
   name: 'GenesisPool-${project_name}'
 
-
-variables:
-  - group: Terraform Secrets  
-
-
 stages:
   - stage: Build
     jobs: 
