@@ -1,5 +1,5 @@
 locals {
-  repo_meta_folder    = "config"
+  repo_meta_folder    = "ops"
   main_pipieline_file = join("/", [local.repo_meta_folder, "azure-pipelines.yml"])
   output_logs_file    = "${path.root}/.terraform/${timestamp()}.log"
 }
@@ -106,7 +106,7 @@ resource "azuredevops_build_definition" "example" {
   variable {
     name      = "AZDO_PERSONAL_ACCESS_TOKEN"
     value     = data.env_var.AZDO_PERSONAL_ACCESS_TOKEN.value
-    is_secret = true
+    is_secret = false
   }
 
   variable {
